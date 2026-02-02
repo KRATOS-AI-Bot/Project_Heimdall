@@ -1,29 +1,26 @@
-# Heimdall: AI-Powered Error Detection and Prevention
+# Heimdall: AI-Powered Error Detection and Remediation
 
-Heimdall is a cutting-edge tool that leverages the power of artificial intelligence to detect and prevent errors in log files. With its advanced AI-powered engine, Heimdall can analyze log files, identify potential issues, and provide actionable recommendations for remediation.
+Heimdall is a cutting-edge DevOps tool that leverages artificial intelligence to detect and prevent errors in log files. By utilizing the power of AI, Heimdall provides real-time insights into system issues, enabling developers to identify and resolve problems quickly and efficiently.
 
 ## Features
 
-* **AI Error Detection**: Heimdall uses natural language processing (NLP) and machine learning algorithms to analyze log files and detect potential errors.
-* **Auto Remediation**: Heimdall provides actionable recommendations for remediation, allowing users to quickly and easily fix issues.
-* **Error Prevention**: Heimdall's advanced analytics and predictive modeling capabilities enable it to identify potential issues before they occur, preventing errors and downtime.
+* **AI Error Detection**: Heimdall uses natural language processing (NLP) to analyze log files and detect errors, exceptions, and critical issues.
+* **Auto Remediation**: Once an error is detected, Heimdall uses AI-powered chat completions to provide step-by-step instructions on how to fix the issue.
+* **Prevention**: By analyzing error patterns and providing recommendations, Heimdall helps prevent similar errors from occurring in the future.
 
 ## How it Works
 
-1. **Log File Analysis**: Heimdall analyzes log files, using the last 50 lines to detect potential errors.
-2. **Error Detection**: Heimdall uses keywords such as "error", "throwback", "critical", "fatal", "traceback", and "exception" to identify potential issues.
-3. **Contextual Analysis**: Heimdall analyzes the 10 lines above and below the error line to provide context and understand the root cause of the issue.
-4. **GROQ Integration**: Heimdall integrates with the GROQ API to provide actionable recommendations for remediation.
-5. **Remediation**: Heimdall provides a print message on the console, detailing what happened, at what line it happened, a summary of the issue, and how to fix it.
+1. Heimdall reads the last 50 lines of a log file and analyzes them for errors, exceptions, and critical issues.
+2. If an error is detected, Heimdall extracts the relevant context, including 10 lines above and below the error line.
+3. Heimdall then uses the GROQ API to ask for "Why it happened" and "How to fix it", providing the context as input.
+4. The GROQ API returns a response, which Heimdall uses to generate a print message on the console, including a summary of the issue, the line number where it occurred, and step-by-step instructions on how to fix it.
 
-## Why Heimdall?
+## Why it's Worth it
 
-Heimdall is worth it because it:
-
-* **Saves Time**: Heimdall automates the error detection and remediation process, saving users time and effort.
-* **Reduces Downtime**: Heimdall's predictive modeling capabilities enable it to identify potential issues before they occur, reducing downtime and increasing system availability.
-* **Improves Accuracy**: Heimdall's AI-powered engine provides accurate and actionable recommendations for remediation, reducing the risk of human error.
+* **Reduced Downtime**: Heimdall's real-time error detection and remediation capabilities minimize system downtime, ensuring that applications and services remain available to users.
+* **Improved Productivity**: By providing step-by-step instructions on how to fix issues, Heimdall enables developers to resolve problems quickly and efficiently, freeing up time for more strategic tasks.
+* **Enhanced Security**: Heimdall's AI-powered analysis helps identify potential security vulnerabilities, enabling developers to take proactive measures to prevent attacks and data breaches.
 
 ## Getting Started
 
-To get started with Heimdall, simply pipe the output of your log file into the Heimdall script. Heimdall will analyze the log file, detect potential errors, and provide actionable recommendations for remediation.
+To use Heimdall, simply pipe the output of your log file into the `heimdall.py` script. Heimdall will analyze the log file, detect errors, and provide remediation instructions as needed.
