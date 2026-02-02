@@ -12,57 +12,67 @@ GROK_API_KEY = os.getenv('GROK_API_KEY')
 # Initialize console
 console = Console()
 
-# Define the think function to call GROQ
-def think(prompt):
-    try:
-        client = requests.Session()
-        client.headers.update({'Authorization': f'Bearer {GROK_API_KEY}'})
-        completion = client.post('https://api.groq.com/v1/chat/completions', json={
-            'model': 'llama-3.3-70b-versatile',
-            'messages': [
-                {'role': 'system', 'content': 'You are K.R.A.T.O.S., an elite DevOps Engineer. You write precise production-ready and secure code'},
-                {'role': 'user', 'content': prompt}
-            ],
-            'temperature': 0.1,
-            'stop': None,
-            'stream': False
-        })
-        return completion.json()['choices'][0]['message']['content']
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        sys.exit(1)
+# Define keywords to look for in log lines
+keywords = ['error', 'critical', 'fatal', 'traceback', 'exception', 'panic', 'warn']
 
-# Read log lines from stdin
-log_lines = sys.stdin.readlines()[-50:]
+# Read last 50 lines from stdin
+lines = sys.stdin.readlines()[-50:]
 
-# Initialize table
-table = Table(title="Log Analysis")
-table.add_column("Line", style="cyan")
-table.add_column("Log", style="magenta")
-
-# Initialize error lines
+# Initialize variables to store error lines and context
 error_lines = []
+error_context = []
 
-# Iterate over log lines to detect errors
-for i, line in enumerate(log_lines):
-    if 'error' in line.lower():
-        error_lines.append((i, line.strip()))
+# Loop through each line to find error keywords
+for i, line in enumerate(lines):
+    for keyword in keywords:
+        if keyword in line.lower():
+            # If error keyword is found, store the line and its context
+            error_lines.append((i, line.strip()))
+            context = lines[max(0, i-10):i] + [line] + lines[i+1:min(len(lines), i+11)]
+            error_context.append('\n'.join(context))
 
-# If no errors detected, print everything's fine
+# If no error lines are found, print a success message
 if not error_lines:
-    console.print("[green]Everything's fine[/green]")
+    console.print('[green]Everything is fine![/green]')
     sys.exit(0)
 
-# Iterate over error lines and call GROQ for each error
-for error_line in error_lines:
-    error_index, error_log = error_line
-    context = '\n'.join(log_lines[max(0, error_index-10):error_index+11])
-    prompt = f"Why did the following error happen and how to fix it?\n{context}"
-    response = think(prompt)
-    table.add_row(str(error_index), error_log)
-    console.print(f"[red]Error detected at line {error_index}[/red]")
-    console.print(f"[yellow]Summary: {error_log}[/yellow]")
-    console.print(f"[blue]Response from GROQ: {response}[/blue]")
+# Define the GROQ client
+def think(prompt):
+    try:
+        completion = requests.post(
+            'https://api.grok.ai/v1/chat/completions',
+            headers={'Authorization': f'Bearer {GROK_API_KEY}'},
+            json={
+                'model': 'llama-3.3-70b-versatile',
+                'messages': [
+                    {'role': 'system', 'content': 'You are K.R.A.T.O.S., an elite DevOps Engineer. You write precise production-ready and secure code'},
+                    {'role': 'user', 'content': prompt}
+                ],
+                'temperature': 0.1,
+                'stop': None,
+                'stream': False
+            }
+        ).json()
+        return completion['choices'][0]['message']['content']
+    except Exception as e:
+        console.print(f'[red]An error occurred: {e}[/red]')
+        sys.exit(1)
 
-# Print table
-console.print(table)
+# Loop through each error line and its context
+for i, (line_number, error_line) in enumerate(error_lines):
+    context = error_context[i]
+    # Call GROQ to get the reason and fix for the error
+    prompt = f'Why did this error happen and how to fix it?\n{context}'
+    response = think(prompt)
+    # Parse the response to get the reason and fix
+    reason = response.split('\n')[0]
+    fix = '\n'.join(response.split('\n')[1:])
+    # Print the error information and fix
+    table = Table(title='Error Information')
+    table.add_column('Line Number', style='cyan')
+    table.add_column('Error Line', style='magenta')
+    table.add_column('Reason', style='yellow')
+    table.add_column('Fix', style='green')
+    table.add_row(str(line_number), error_line, reason, fix)
+    console.print(table)
+
