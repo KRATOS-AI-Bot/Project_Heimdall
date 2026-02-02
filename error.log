@@ -1,0 +1,12 @@
+2026-02-02 10:00:01 INFO Starting Server...
+2026-02-02 10:00:02 INFO Connected to DB.
+2026-02-02 10:00:05 WARN High Memory Usage: 85%
+2026-02-02 10:00:15 ERROR ConnectionRefusedError: [Errno 111] Connection refused
+Traceback (most recent call last):
+  File "app.py", line 45, in <module>
+    db.connect(host="10.0.0.5", timeout=30)
+  File "/usr/lib/python3.12/site-packages/db.py", line 12, in connect
+    raise ConnectionTimeout("Database took too long to respond")
+Exception: Critical Database Failure. Retrying...
+2026-02-02 10:00:16 FATAL System Out of Memory (OOM) - Process Killed.
+2026-02-02 10:00:17 INFO Shutting down...

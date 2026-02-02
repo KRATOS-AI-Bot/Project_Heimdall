@@ -2,4 +2,4 @@
 bot.py
 credentials/
 *.sarif
-groq/
+brain/

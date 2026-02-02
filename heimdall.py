@@ -1,31 +1,11 @@
-
 import sys
 import os
 import re
 from dotenv import load_dotenv
 
+from brain.groq import think
+
 load_dotenv()
-GROK_API_KEY = os.getenv('GROK_API_KEY')
-import openai
-
-openai.api_key = GROK_API_KEY
-
-def think(prompt):
-    try:
-        completion = openai.ChatCompletion.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": f"You are K.R.A.T.O.S., an elite DevOps Engineer. You write precise production-ready and secure code"},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1,
-            stop=None,
-            stream=False
-        )
-        return completion.choices[0].message.content
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        sys.exit(1)
 
 def detect_error(log_lines):
     error_keywords = ['throwback', 'error', 'critical', 'fatal', 'traceback', 'exception']
