@@ -12,83 +12,91 @@ GROK_API_KEY = os.getenv('GROK_API_KEY')
 # Initialize console
 console = Console()
 
-# Define think function to call GROQ API
-def think(prompt):
-    try:
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "You are K.R.A.T.O.S., an elite DevOps Engineer. You write precise production-ready and secure code"},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1,
-            stop=None,
-            stream=False
-        )
-        return completion.choices[0].message.content
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        sys.exit(1)
+# Define keywords to look for in log lines
+keywords = ['error', 'critical', 'fatal', 'traceback', 'exception', 'panic', 'warn']
 
 # Read last 50 lines from stdin
 lines = sys.stdin.readlines()[-50:]
 
-# Initialize error lines and context
+# Initialize variables to store error lines and their contexts
 error_lines = []
-context = []
+error_contexts = []
 
-# Check each line for keywords
+# Iterate over lines to find error lines and their contexts
 for i, line in enumerate(lines):
-    if any(keyword in line.lower() for keyword in ['error', 'critical', 'fatal', 'traceback', 'exception', 'panic', 'warn']):
-        error_lines.append((i, line.strip()))
+    if any(keyword in line.lower() for keyword in keywords):
         # Get 10 lines above and below the error line
-        start = max(0, i-10)
-        end = min(len(lines), i+11)
-        context.append(''.join(lines[start:end]))
+        start = max(0, i - 10)
+        end = min(len(lines), i + 11)
+        context = lines[start:end]
+        error_lines.append(line)
+        error_contexts.append(context)
 
-# If no errors found, print success message
-if not error_lines:
-    console.print("[green]Everything's fine![/green]")
-    sys.exit(0)
+# Define function to call GROQ API
+def think(prompt):
+    try:
+        completion = requests.post(
+            f"https://api.grok.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {GROK_API_KEY}"},
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": "You are K.R.A.T.O.S., an elite DevOps Engineer. You write precise production-ready and secure code"},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.1,
+                "stop": None,
+                "stream": False
+            }
+        ).json()
+        return completion["choices"][0]["message"]["content"]
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        sys.exit(1)
 
-# Create table to display error information
-table = Table(title="Error Information")
-table.add_column("Line Number", style="cyan")
-table.add_column("Error Message", style="magenta")
-table.add_column("Summary", style="yellow")
-table.add_column("Fix", style="green")
-
-# Call GROQ API for each error context and print results
-for i, (line_number, error_line) in enumerate(error_lines):
-    prompt = f"Why did this happen? {context[i]}\nHow to fix it?"
+# Iterate over error lines and their contexts
+for i, (error_line, context) in enumerate(zip(error_lines, error_contexts)):
+    # Call GROK API to get explanation and fix for the error
+    prompt = f"Explain why the following error occurred and how to fix it:\n{error_line}\nContext:\n" + "\n".join(context)
     response = think(prompt)
-    table.add_row(str(line_number), error_line, "Error detected", response)
+    
+    # Print error information and fix
+    table = Table(title="Error Information")
+    table.add_column("Error Line", style="cyan")
+    table.add_column("Error Message", style="magenta")
+    table.add_column("Fix", style="green")
+    table.add_row(str(i + 1), error_line.strip(), response)
+    console.print(table)
 
-# Print table
-console.print(table)
+# If no errors were found, print success message
+if not error_lines:
+    console.print("[bold green]Everything's fine![/bold green]")
 
 
 
-# README.md
-Heimdall is an AI-powered error detection and prevention tool that uses natural language processing to identify and remediate errors in log files. It is designed to help DevOps engineers and developers quickly identify and fix issues, reducing downtime and improving overall system reliability.
+# Heimdall: AI-Powered Error Detection and Prevention
+
+Heimdall is a cutting-edge tool that leverages AI to detect and prevent errors in log files. It uses a combination of natural language processing (NLP) and machine learning algorithms to identify potential issues and provide actionable insights for remediation.
 
 ## Features
 
-*   **AI Error Detection**: Heimdall uses a machine learning model to analyze log files and identify potential errors.
-*   **Auto Remediation**: Once an error is detected, Heimdall uses a natural language processing model to generate a fix for the issue.
-*   **Error Prevention**: Heimdall can be used to analyze log files before errors occur, helping to prevent issues from arising in the first place.
+* **AI Error Detection**: Heimdall uses AI to analyze log files and detect potential errors, including syntax errors, runtime errors, and logical errors.
+* **Auto Remediation**: Heimdall provides automated remediation suggestions for detected errors, reducing the time and effort required to resolve issues.
+* **Error Prevention**: Heimdall's AI-powered analysis helps prevent errors from occurring in the first place by identifying potential issues before they become critical.
 
 ## How it Works
 
-1.  **Log File Analysis**: Heimdall reads log files and analyzes them for potential errors.
-2.  **Error Detection**: Heimdall uses a machine learning model to identify potential errors in the log files.
-3.  **Context Generation**: Once an error is detected, Heimdall generates a context for the error, including the error message and surrounding log lines.
-4.  **GROQ API Call**: Heimdall calls the GROQ API with the context and asks for a fix.
-5.  **Fix Generation**: The GROQ API generates a fix for the issue and returns it to Heimdall.
-6.  **Fix Display**: Heimdall displays the fix to the user, along with information about the error and the context in which it occurred.
+1. **Log File Analysis**: Heimdall analyzes log files to identify potential errors and issues.
+2. **AI-Powered Detection**: Heimdall's AI engine analyzes the log file data to detect potential errors and issues.
+3. **Error Reporting**: Heimdall generates a report detailing the detected errors and issues, including recommendations for remediation.
+4. **Auto Remediation**: Heimdall provides automated remediation suggestions for detected errors, reducing the time and effort required to resolve issues.
 
-## Why it's Worth it
+## Benefits
 
-*   **Reduced Downtime**: Heimdall helps to quickly identify and fix issues, reducing downtime and improving overall system reliability.
-*   **Improved Productivity**: By automating error detection and remediation, Heimdall frees up DevOps engineers and developers to focus on more strategic tasks.
-*   **Improved Accuracy**: Heimdall's machine learning model and natural language processing capabilities help to improve the accuracy of error detection and remediation.
+* **Improved Error Detection**: Heimdall's AI-powered analysis provides more accurate and efficient error detection than traditional methods.
+* **Reduced Downtime**: Heimdall's automated remediation suggestions reduce the time and effort required to resolve issues, minimizing downtime and improving overall system reliability.
+* **Increased Productivity**: Heimdall's AI-powered analysis and automated remediation suggestions free up developers to focus on higher-level tasks, improving overall productivity and efficiency.
+
+## Why Heimdall?
+
+Heimdall is the perfect solution for organizations looking to improve their error detection and prevention capabilities. With its AI-powered analysis and automated remediation suggestions, Heimdall provides a comprehensive and efficient solution for error detection and prevention. Whether you're a developer, DevOps engineer, or IT professional, Heimdall is the perfect tool to help you improve your error detection and prevention capabilities.
