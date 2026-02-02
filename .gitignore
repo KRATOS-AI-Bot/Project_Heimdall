@@ -1,0 +1,5 @@
+*.env
+bot.py
+credentials/
+*.sarif
+groq/
