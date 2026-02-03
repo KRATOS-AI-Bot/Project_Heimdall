@@ -1,84 +1,67 @@
 
+from brain.groq import think
 import sys
-import os
 from rich import print
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
-import requests
+import json
 
-# Load GROK API key from .env file
-GROK_API_KEY = os.getenv('GROK_API_KEY')
-
-# Initialize console
 console = Console()
 
-# Define keywords to look for in log lines
-keywords = ['error', 'critical', 'fatal', 'traceback', 'exception', 'panic', 'warn']
-
-# Read last 50 lines from stdin
-lines = sys.stdin.readlines()[-50:]
-
-# Initialize variables to store error lines and context
-error_lines = []
-context = []
-
-# Loop through lines to find error lines and build context
-for i, line in enumerate(lines):
-    if any(keyword in line.lower() for keyword in keywords):
-        error_lines.append((i, line.strip()))
-        # Build context by adding 10 lines above and below error line
-        start = max(0, i - 10)
-        end = min(len(lines), i + 11)
-        context.extend(lines[start:end])
-
-# If no error lines found, print success message and exit
-if not error_lines:
-    console.print("[green]Everything's fine![/green]")
-    sys.exit(0)
-
-# Aggregate error lines and context into a single prompt
-prompt = "Why did the following error occur and how can it be fixed?\n\n"
-prompt += "\n".join(context)
-
-# Define function to call GROK API
-def think(prompt):
-    try:
-        completion = requests.post(
-            "https://api.grok.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {GROK_API_KEY}"},
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": "You are K.R.A.T.O.S., an elite DevOps Engineer. You write precise production-ready and secure code"},
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": 0.1,
-                "stop": None,
-                "stream": False
-            }
-        ).json()
-        return completion["choices"][0]["message"]["content"]
-    except Exception as e:
-        console.print(f"[red]An error occurred: {e}[/red]")
+def read_logs():
+    logs = sys.stdin.readlines()
+    if not logs:
+        console.print("[red]Please provide log input[/red]")
         sys.exit(1)
+    return logs[-50:]
 
-# Call GROK API and print response
-response = think(prompt)
-console.print("[yellow]Error detected![/yellow]")
-console.print(f"[blue]Error lines: {', '.join(str(line[0]) for line in error_lines)}[/blue]")
-console.print(f"[blue]Summary: {response.split('\n')[0]}[/blue]")
-console.print(f"[green]How to fix: {response}[/green]")
+def scan_logs(logs):
+    keywords = ['error', 'critical', 'fatal', 'traceback', 'exception', 'panic', 'warn']
+    indices = []
+    for i, log in enumerate(logs):
+        for keyword in keywords:
+            if keyword in log.lower():
+                indices.append(i)
+                break
+    return indices
 
-# Create a table to display error information
-table = Table(title="Error Information")
-table.add_column("Line Number", style="cyan")
-table.add_column("Error Message", style="magenta")
-table.add_column("Summary", style="blue")
-table.add_column("How to Fix", style="green")
+def aggregate_logs(logs, indices):
+    if not indices:
+        console.print("[green]System Healthy[/green]")
+        sys.exit(0)
+    min_index = min(indices)
+    max_index = max(indices)
+    return '\n'.join(logs[max(0, min_index-10):min(len(logs), max_index+11)])
 
-# Add rows to the table
-for line in error_lines:
-    table.add_row(str(line[0]), line[1], response.split('\n')[0], response)
+def call_brain(text):
+    with console.status("Waiting for API..."):
+        try:
+            response = think(text)
+            return json.loads(response)
+        except json.JSONDecodeError:
+            console.print("[red]Failed to parse JSON response[/red]")
+            sys.exit(1)
 
-# Print the table
-console.print(table)
+def print_report(response, indices, logs):
+    table = Table(title="Error Snippets")
+    table.add_column("Line Number", style="cyan")
+    table.add_column("Error Snippet", style="magenta")
+    for index in indices:
+        table.add_row(str(index+1), logs[index].strip())
+    console.print(Panel(f"[bold]Incident Report[/bold]\n"
+                         f"### Title: {response['title']}\n"
+                         f"### Root Cause: {response['root_cause']}\n"
+                         f"### Fix: {response['fix']}\n",
+                         title="Incident Report", border_style="red"))
+    console.print(table)
+
+def main():
+    logs = read_logs()
+    indices = scan_logs(logs)
+    text = aggregate_logs(logs, indices)
+    response = call_brain(text)
+    print_report(response, indices, logs)
+
+if __name__ == "__main__":
+    main()

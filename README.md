@@ -1,102 +1,87 @@
-
+from brain.groq import think
 import sys
-import os
 from rich import print
 from rich.console import Console
 from rich.table import Table
-import requests
+import json
 
-# Load GROK API key from .env file
-GROK_API_KEY = os.getenv('GROK_API_KEY')
-
-# Initialize console
 console = Console()
 
-# Define keywords to look for in log lines
-keywords = ['error', 'critical', 'fatal', 'traceback', 'exception', 'panic', 'warn']
+def heimdall():
+    logs = sys.stdin.readlines()
+    if not logs:
+        print("[red]Please provide log input[/red]")
+        return
 
-# Read last 50 lines from stdin
-lines = sys.stdin.readlines()[-50:]
+    logs = logs[-50:]  # Keep only last 50 lines of logs
 
-# Initialize variables to store error lines and their contexts
-error_lines = []
-error_contexts = []
+    keywords = ['error', 'critical', 'fatal', 'traceback', 'exception', 'panic', 'warn']
+    error_indices = []
+    for i, log in enumerate(logs):
+        for keyword in keywords:
+            if keyword in log.lower():
+                error_indices.append(i)
+                break
 
-# Iterate over lines to find error lines and their contexts
-for i, line in enumerate(lines):
-    if any(keyword in line.lower() for keyword in keywords):
-        # Get 10 lines above and below the error line
-        start = max(0, i - 10)
-        end = min(len(lines), i + 11)
-        context = lines[start:end]
-        error_lines.append(line)
-        error_contexts.append(context)
+    if not error_indices:
+        print("[green]System Healthy[/green]")
+        return
 
-# Define function to call GROQ API
-def think(prompt):
+    min_index = min(error_indices)
+    max_index = max(error_indices)
+
+    aggregated_text = ''.join(logs[max(0, min_index - 10):min_index + 11])
+
+    console.status("Waiting for API response...")
+
     try:
-        completion = requests.post(
-            f"https://api.grok.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {GROK_API_KEY}"},
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": "You are K.R.A.T.O.S., an elite DevOps Engineer. You write precise production-ready and secure code"},
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": 0.1,
-                "stop": None,
-                "stream": False
-            }
-        ).json()
-        return completion["choices"][0]["message"]["content"]
+        response = think(aggregated_text)
+        response = json.loads(response)
+        title = response['title']
+        root_cause = response['root_cause']
+        fix = response['fix']
     except Exception as e:
-        print(f"An error occurred: {e}")
-        sys.exit(1)
+        print(f"Error parsing API response: {e}")
+        return
 
-# Iterate over error lines and their contexts
-for i, (error_line, context) in enumerate(zip(error_lines, error_contexts)):
-    # Call GROK API to get explanation and fix for the error
-    prompt = f"Explain why the following error occurred and how to fix it:\n{error_line}\nContext:\n" + "\n".join(context)
-    response = think(prompt)
-    
-    # Print error information and fix
-    table = Table(title="Error Information")
-    table.add_column("Error Line", style="cyan")
-    table.add_column("Error Message", style="magenta")
-    table.add_column("Fix", style="green")
-    table.add_row(str(i + 1), error_line.strip(), response)
+    console.status("API response received")
+
+    error_snippets = []
+    for index in error_indices:
+        error_snippets.append((index, logs[index].strip()))
+
+    table = Table(title="Error Snippets")
+    table.add_column("Line Number", style="cyan")
+    table.add_column("Error Snippet", style="magenta")
+
+    for snippet in error_snippets:
+        table.add_row(str(snippet[0]), snippet[1])
+
+    console.print(
+        f"[bold]Incident Report[/bold]\n"
+        f"### Title: {title}\n"
+        f"### Root Cause: {root_cause}\n"
+        f"### Fix: {fix}\n"
+    )
     console.print(table)
 
-# If no errors were found, print success message
-if not error_lines:
-    console.print("[bold green]Everything's fine![/bold green]")
+if __name__ == "__main__":
+    heimdall() 
 
+# README
+Heimdall is an AI-powered error detection and prevention tool that uses natural language processing to identify and diagnose errors in log files. It provides auto remediation suggestions to help developers quickly resolve issues.
 
+Heimdall features AI error detection and prevention, auto remediation, and an aggregation architecture that combines multiple error logs into a single API call for cost savings.
 
-# Heimdall: AI-Powered Error Detection and Prevention
+The aggregation architecture works by scanning log files for error keywords, extracting the relevant text blocks, and combining them into a single string. This string is then passed to the AI engine for analysis.
 
-Heimdall is a cutting-edge tool that leverages AI to detect and prevent errors in log files. It uses a combination of natural language processing (NLP) and machine learning algorithms to identify potential issues and provide actionable insights for remediation.
+To use Heimdall, simply pipe your log file into the heimdall.py script: cat error.log | python heimdall.py
 
-## Features
+Heimdall provides a number of benefits, including:
 
-* **AI Error Detection**: Heimdall uses AI to analyze log files and detect potential errors, including syntax errors, runtime errors, and logical errors.
-* **Auto Remediation**: Heimdall provides automated remediation suggestions for detected errors, reducing the time and effort required to resolve issues.
-* **Error Prevention**: Heimdall's AI-powered analysis helps prevent errors from occurring in the first place by identifying potential issues before they become critical.
+*   AI-powered error detection and diagnosis
+*   Auto remediation suggestions
+*   Aggregation architecture for cost savings
+*   Easy to use and integrate into existing workflows
 
-## How it Works
-
-1. **Log File Analysis**: Heimdall analyzes log files to identify potential errors and issues.
-2. **AI-Powered Detection**: Heimdall's AI engine analyzes the log file data to detect potential errors and issues.
-3. **Error Reporting**: Heimdall generates a report detailing the detected errors and issues, including recommendations for remediation.
-4. **Auto Remediation**: Heimdall provides automated remediation suggestions for detected errors, reducing the time and effort required to resolve issues.
-
-## Benefits
-
-* **Improved Error Detection**: Heimdall's AI-powered analysis provides more accurate and efficient error detection than traditional methods.
-* **Reduced Downtime**: Heimdall's automated remediation suggestions reduce the time and effort required to resolve issues, minimizing downtime and improving overall system reliability.
-* **Increased Productivity**: Heimdall's AI-powered analysis and automated remediation suggestions free up developers to focus on higher-level tasks, improving overall productivity and efficiency.
-
-## Why Heimdall?
-
-Heimdall is the perfect solution for organizations looking to improve their error detection and prevention capabilities. With its AI-powered analysis and automated remediation suggestions, Heimdall provides a comprehensive and efficient solution for error detection and prevention. Whether you're a developer, DevOps engineer, or IT professional, Heimdall is the perfect tool to help you improve your error detection and prevention capabilities.
+Overall, Heimdall is a powerful tool for developers and DevOps teams looking to improve their error detection and prevention capabilities. Its AI-powered engine and aggregation architecture make it an ideal solution for teams looking to reduce downtime and improve overall system reliability.
