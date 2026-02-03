@@ -12,7 +12,7 @@ console = Console()
 def read_logs():
     logs = sys.stdin.readlines()
     if not logs:
-        console.print("[red]Please provide log input[/red]")
+        print("[red]Please provide log input[/red]")
         sys.exit(1)
     return logs[-50:]
 
@@ -28,11 +28,11 @@ def scan_logs(logs):
 
 def aggregate_logs(logs, indices):
     if not indices:
-        console.print("[green]System Healthy[/green]")
+        print("[green]System Healthy[/green]")
         sys.exit(0)
     min_index = min(indices)
     max_index = max(indices)
-    return '\n'.join(logs[max(0, min_index-10):max_index+11])
+    return '\n'.join(logs[max(0, min_index-10):min(len(logs), max_index+11)])
 
 def call_brain(text):
     console.status("Waiting for API response...")
@@ -41,8 +41,8 @@ def call_brain(text):
         console.status("API response received")
         return json.loads(response)
     except json.JSONDecodeError:
-        console.print("[red]Invalid JSON response[/red]")
-        sys.exit(1)
+        console.status("Failed to parse JSON response")
+        return None
 
 def print_report(response, indices, logs):
     table = Table(title="Error Snippets")
@@ -50,11 +50,11 @@ def print_report(response, indices, logs):
     table.add_column("Error Snippet", style="magenta")
     for index in indices:
         table.add_row(str(index+1), logs[index].strip())
-    console.print(Panel(f"**Incident Report**\n"
+    console.print(Panel(f"[bold]Incident Report[/bold]\n"
                          f"### Title: {response['title']}\n"
                          f"### Root Cause: {response['root_cause']}\n"
                          f"### Fix: {response['fix']}\n",
-                         title="Incident Report"))
+                         title="Incident Report", border_style="red"))
     console.print(table)
 
 def main():
@@ -62,7 +62,8 @@ def main():
     indices = scan_logs(logs)
     text = aggregate_logs(logs, indices)
     response = call_brain(text)
-    print_report(response, indices, logs)
+    if response:
+        print_report(response, indices, logs)
 
 if __name__ == "__main__":
     main()
