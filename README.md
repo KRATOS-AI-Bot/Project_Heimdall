@@ -1,73 +1,20 @@
-from ..brain.groq import think
-import sys
-import rich
-from rich.console import Console
-import json
-import time
-from datetime import datetime
+# Heimdall: AI-Powered Error Detection and Prevention
+Heimdall is a cutting-edge DevOps tool that leverages artificial intelligence to detect and prevent errors in log files. It uses a unique aggregation architecture to minimize API calls, reducing costs and improving efficiency.
 
-console = Console()
+## Features
+Heimdall boasts the following features:
+* AI Error Detection: Heimdall uses natural language processing to identify errors in log files, allowing for swift detection and remediation.
+* Error Prevention: By analyzing log files, Heimdall can identify potential issues before they become critical, preventing downtime and data loss.
+* Auto Remediation: Heimdall provides automated fixes for detected errors, reducing the need for manual intervention and minimizing recovery time.
 
-def save_reports(response, logs, indices):
-    timestamp = int(time.time())
-    incident_file = f"incidents/incident_{timestamp}.json"
-    record = {
-        "Timestamp": timestamp,
-        "Analysis": response,
-        "raw_error_snippit": [logs[i] for i in indices]
-    }
-    with open(incident_file, 'w') as f:
-        json.dump(record, f)
-    return record
+## Aggregation Architecture
+Heimdall's aggregation architecture is designed to minimize API calls, reducing costs and improving efficiency. Instead of making multiple API calls for each error, Heimdall aggregates all errors into a single text block, which is then sent to the AI engine for analysis. This approach ensures that Heimdall can process large log files quickly and efficiently, without incurring excessive costs.
 
-def heimdall(logs):
-    if not logs:
-        console.print("[red]No logs provided. Please provide logs to analyze.[/red]")
-        return {"error": "No logs provided"}
+## Usage
+Heimdall can be used by piping log files into the heimdall.py script. For example:
+cat error.log | python heimdall.py
 
-    logs = logs[-50:]
-    keywords = ['error', 'critical', 'fatal', 'traceback', 'exception', 'panic', 'warn']
-    indices = [i for i, log in enumerate(logs) if any(keyword in log for keyword in keywords)]
+This will analyze the log file and return a JSON object containing the detected errors, root causes, and fixes.
 
-    if not indices:
-        return {"error": "No errors found in logs"}
-
-    min_index = min(indices)
-    max_index = max(indices)
-    aggregated_text = '\n'.join(logs[max(min_index-10, 0):min(max_index+11, len(logs))])
-
-    console.status("Waiting for API response...")
-    try:
-        response = think(aggregated_text)
-        response = json.loads(response)
-    except json.JSONDecodeError:
-        console.print("[red]Invalid JSON response from API.[/red]")
-        return {"error": "Invalid JSON response from API"}
-
-    console.status("API response received")
-
-    console.print(rich.panel.Panel(
-        f"[bold]Incident Report[/bold]\n"
-        f"### Title: {response['title']}\n"
-        f"### Root Cause: {response['root_cause']}\n"
-        f"### Fix: {response['fix']}",
-        title="Incident Report"
-    ))
-
-    table = rich.table.Table(title="Error Snippets")
-    table.add_column("Line Number", style="cyan")
-    table.add_column("Error Snippet", style="magenta")
-
-    for index in indices:
-        table.add_row(str(index), logs[index])
-
-    console.print(table)
-
-    record = save_reports(response, logs, indices)
-    return record
-
-if __name__ == "__main__":
-    logs = sys.stdin.readlines()
-    logs = [log.strip() for log in logs]
-    response = heimdall(logs)
-    print(json.dumps(response))
+## Benefits
+Heimdall's AI-powered error detection and prevention capabilities make it an invaluable tool for DevOps teams. By detecting and preventing errors, Heimdall can help reduce downtime, improve system reliability, and increase overall efficiency. The aggregation architecture ensures that Heimdall can process large log files quickly and efficiently, without incurring excessive costs.

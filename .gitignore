@@ -1,5 +1,5 @@
 *.env
-bot.py
+bot*.py
 credentials/
 *.sarif
 brain/
