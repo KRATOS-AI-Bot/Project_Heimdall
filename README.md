@@ -1,4 +1,6 @@
-# Heimdall is an AI-powered error detection and prevention tool that uses natural language processing to identify and diagnose errors in log files. It provides auto remediation suggestions to help developers quickly resolve issues.
+# Heimdall - an AI-powered error detection and prevention tool
+
+#### Heimdall is an AI-powered error detection and prevention tool that uses natural language processing to identify and diagnose errors in log files. It provides auto remediation suggestions to help developers quickly resolve issues.
 
 Heimdall features AI error detection and prevention, auto remediation, and an aggregation architecture that combines multiple error logs into a single API call for cost savings.
 
