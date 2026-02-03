@@ -32,16 +32,17 @@ def aggregate_logs(logs, indices):
         sys.exit(0)
     min_index = min(indices)
     max_index = max(indices)
-    return '\n'.join(logs[max(0, min_index-10):min(len(logs), max_index+11)])
+    return '\n'.join(logs[max(0, min_index-10):max_index+11])
 
 def call_brain(text):
-    with console.status("Waiting for API..."):
-        try:
-            response = think(text)
-            return json.loads(response)
-        except json.JSONDecodeError:
-            console.print("[red]Failed to parse JSON response[/red]")
-            sys.exit(1)
+    console.status("Waiting for API response...")
+    try:
+        response = think(text)
+        console.status("API response received")
+        return json.loads(response)
+    except json.JSONDecodeError:
+        console.print("[red]Invalid JSON response[/red]")
+        sys.exit(1)
 
 def print_report(response, indices, logs):
     table = Table(title="Error Snippets")
@@ -49,11 +50,11 @@ def print_report(response, indices, logs):
     table.add_column("Error Snippet", style="magenta")
     for index in indices:
         table.add_row(str(index+1), logs[index].strip())
-    console.print(Panel(f"[bold]Incident Report[/bold]\n"
+    console.print(Panel(f"**Incident Report**\n"
                          f"### Title: {response['title']}\n"
                          f"### Root Cause: {response['root_cause']}\n"
                          f"### Fix: {response['fix']}\n",
-                         title="Incident Report", border_style="red"))
+                         title="Incident Report"))
     console.print(table)
 
 def main():
